@@ -1,23 +1,21 @@
 process STARFUSION_BUILD {
     tag "$meta.id"
     label 'process_high'
+    label 'process_gpu'
     stageInMode 'copy'
 
-    conda "${moduleDir}/environment.yml"
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/75/75d085bf2a8e40c6693b357800eef0f9568f661226d0888339bc77f7852234bb/data' :
-        'community.wave.seqera.io/library/dfam_hmmer_minimap2_star-fusion:e285bb3eb373b9a7'}"
+    container "nvcr.io/nvidia/clara/clara-parabricks:4.5.1-1"
 
     input:
-    tuple val(meta), path(fasta)
-    tuple val(meta2), path(gtf)
-    path fusion_annot_lib
-    val dfam_species
-    path pfam_url
-    path dfam_urls, arity: '5'
-    path annot_filter_url
+    tuple val(meta), path(reads)
+    tuple val(meta1), path(fasta)
+    tuple val(meta2), path(chimeric_junction)
+    tuple val(meta3), path(genome_lib_dir)
+    tuple val(meta4), path(index)
 
     output:
+    tuple val(meta), path("*.bam")                  , emit: bam              , optional:true
+    tuple val(meta), path("*.bai")                  , emit: bai              , optional:true
     tuple val(meta), path("${prefix}_genome_lib_build_dir"), emit: reference
     path "versions.yml", emit: versions
 
@@ -25,22 +23,30 @@ process STARFUSION_BUILD {
     task.ext.when == null || task.ext.when
 
     script:
+    // Exit if running this module with -profile conda / -profile mamba
+    if (workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1) {
+        error "Parabricks module does not support Conda. Please use Docker / Singularity / Podman instead."
+    }
+
     def args = task.ext.args ?: ''
     prefix = task.ext.prefix ?: "${meta.id}"
     def VERSION = '1.15.1' // WARN: This is the actual version of the STAR-FUSION, but version information of tool is not updated and prints '1.15.0'
+    
+    def in_fq_command = meta.single_end ? "--in-se-fq $reads" : "--in-fq $reads"
+    def num_gpus = task.accelerator ? "--num-gpus $task.accelerator.request" : ''
     """
-    gunzip ${pfam_url} && hmmpress Pfam-A.hmm
+    INDEX=`find -L ./ -name "*.amb" | sed 's/\\.amb\$//'`
+    cp $fasta \$INDEX
 
-    prep_genome_lib.pl \\
-        --genome_fa $fasta \\
-        --gtf $gtf \\
-        --dfam_db *_dfam.hmm \\
-        --pfam_db Pfam-A.hmm \\
-        --fusion_annot_lib $fusion_annot_lib \\
-        --annot_filter_rule ${annot_filter_url} \\
-        --CPU $task.cpus \\
-        --output_dir ${prefix}_genome_lib_build_dir \\
-        ${args}
+    pbrun \\
+        --ref \$INDEX \\
+        $in_fq_command \\
+        --chimeric-junction ${chimeric_junction} \\
+        --output-dir $prefix \\
+        --genome-lib-dir ${genome_lib_dir} \\
+        --out-bam ${prefix}.bam \\
+        $num_gpus \\
+        $args
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

@@ -4,11 +4,16 @@ nextflow_process {
     process "STARFUSION_BUILD"
     tag "modules"
     tag "modules_nfcore"
-    tag "starfusion"
-    tag "starfusion/build"
-    tag "fusioninspector"
+    tag "parabricks"
+    tag "parabricks/starfusion"
+    tag "gpu"
+
+    config './nextflow.config'
 
     test("STARFUSION_BUILD - human - minigenome") {
+
+        config './nextflow.config'
+        
         when {
             process {
                 """
