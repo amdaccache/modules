@@ -6,6 +6,9 @@ nextflow_process {
     tag "modules_nfcore"
     tag "parabricks"
     tag "parabricks/starfusion"
+    tag "starfusion"
+    tag "starfusion/build"
+    tag "fusioninspector"
     tag "gpu"
 
     test("STARFUSION_BUILD - human - minigenome") {
