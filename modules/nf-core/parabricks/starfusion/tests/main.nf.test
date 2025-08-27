@@ -1,0 +1,57 @@
+nextflow_process {
+
+    name "Test Process PARABRICKS_STARFUSION"
+    script "../main.nf"
+    process "PARABRICKS_STARFUSION"
+
+    tag "modules"
+    tag "modules_nfcore"
+    tag "parabricks"
+    tag "parabricks/starfusion"
+    tag "gpu"
+
+    test("STARFUSION_BUILD - test") {
+
+        config "./nextflow.config"
+
+        setup {
+            run("STAR_GENOMEGENERATE") {
+                script "../../stargenomegenerate/main.nf"
+                process {
+                    """
+                    input[0] = Channel.of([
+                        [ id:'test_fasta' ],
+                        [ file(params.modules_testdata_base_path + 'genomics/homo_sapiens/genome/genome.fasta', checkIfExists: true) ]
+                    ])
+                    input[1] = Channel.of([
+                        [ id:'test_gtf' ],
+                        [ file(params.modules_testdata_base_path + 'genomics/homo_sapiens/genome/genome.gtf', checkIfExists: true) ]
+                    ])
+                    """
+                }
+            }
+        }
+
+        when {
+
+            def star_index = STAR_GENOMEGENERATE.out.index[1]
+            def chimeric_junction = file("${star_index}/Chimeric.out.junction")
+
+            process {
+                """
+                input[0] = Channel.of([
+                    [ id:'test' ],
+                    [file(chimeric_junction)]
+                ])
+                input[1] = STAR_GENOMEGENERATE.out.index
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success }
+            )
+        }
+    }
+}

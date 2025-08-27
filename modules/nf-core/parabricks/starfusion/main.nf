@@ -7,16 +7,13 @@ process STARFUSION_BUILD {
     container "nvcr.io/nvidia/clara/clara-parabricks:4.5.1-1"
 
     input:
-    tuple val(meta), path(reads)
-    tuple val(meta1), path(fasta)
-    tuple val(meta2), path(chimeric_junction)
-    tuple val(meta3), path(genome_lib_dir)
-    tuple val(meta4), path(index)
+    tuple val(meta), path(chimeric_junction)
+    tuple val(meta2), path(genome_lib_dir)
 
     output:
-    tuple val(meta), path("*.bam")                  , emit: bam              , optional:true
-    tuple val(meta), path("*.bai")                  , emit: bai              , optional:true
-    tuple val(meta), path("${prefix}_genome_lib_build_dir"), emit: reference
+    // tuple val(meta), path("*.bam")                  , emit: bam              , optional:true
+    // tuple val(meta), path("*.bai")                  , emit: bai              , optional:true
+    // tuple val(meta), path("${prefix}_genome_lib_build_dir"), emit: reference
     path "versions.yml", emit: versions
 
     when:
@@ -32,19 +29,12 @@ process STARFUSION_BUILD {
     prefix = task.ext.prefix ?: "${meta.id}"
     def VERSION = '1.15.1' // WARN: This is the actual version of the STAR-FUSION, but version information of tool is not updated and prints '1.15.0'
     
-    def in_fq_command = meta.single_end ? "--in-se-fq $reads" : "--in-fq $reads"
     def num_gpus = task.accelerator ? "--num-gpus $task.accelerator.request" : ''
     """
-    INDEX=`find -L ./ -name "*.amb" | sed 's/\\.amb\$//'`
-    cp $fasta \$INDEX
-
     pbrun \\
-        --ref \$INDEX \\
-        $in_fq_command \\
         --chimeric-junction ${chimeric_junction} \\
-        --output-dir $prefix \\
         --genome-lib-dir ${genome_lib_dir} \\
-        --out-bam ${prefix}.bam \\
+        --output-dir $prefix \\
         $num_gpus \\
         $args
 
