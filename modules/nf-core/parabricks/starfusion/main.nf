@@ -1,4 +1,4 @@
-process STARFUSION_BUILD {
+process PARABRICKS_STARFUSION {
     tag "$meta.id"
     label 'process_high'
     label 'process_gpu'

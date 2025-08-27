@@ -12,8 +12,6 @@ nextflow_process {
 
     test("STARFUSION_BUILD - test") {
 
-        config "./nextflow.config"
-
         setup {
             run("STAR_GENOMEGENERATE") {
                 script "../../stargenomegenerate/main.nf"
@@ -34,14 +32,11 @@ nextflow_process {
 
         when {
 
-            def star_index = STAR_GENOMEGENERATE.out.index[1]
-            def chimeric_junction = file("${star_index}/Chimeric.out.junction")
-
             process {
                 """
                 input[0] = Channel.of([
                     [ id:'test' ],
-                    [file(chimeric_junction)]
+                    [file("Chimeric.out.junction")]
                 ])
                 input[1] = STAR_GENOMEGENERATE.out.index
                 """
