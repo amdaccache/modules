@@ -35,10 +35,7 @@ nextflow_process {
 
             process {
                 """
-                input[0] = Channel.of([
-                    [ id:'test' ],
-                    [file("Chimeric.out.junction")]
-                ])
+                input[0] = STAR_GENOMEGENERATE.out.junction
                 input[1] = STAR_GENOMEGENERATE.out.index
                 """
             }

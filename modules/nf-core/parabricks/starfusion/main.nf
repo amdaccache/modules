@@ -7,7 +7,7 @@ process PARABRICKS_STARFUSION {
     container "nvcr.io/nvidia/clara/clara-parabricks:4.5.1-1"
 
     input:
-    tuple val(meta), path(chimeric_junction)
+    tuple val(meta), path(junction)
     tuple val(meta2), path(genome_lib_dir)
 
     output:
@@ -32,7 +32,8 @@ process PARABRICKS_STARFUSION {
     def num_gpus = task.accelerator ? "--num-gpus $task.accelerator.request" : ''
     """
     pbrun \\
-        --chimeric-junction ${chimeric_junction} \\
+        starfusion \\
+        --chimeric-junction ${junction} \\
         --genome-lib-dir ${genome_lib_dir} \\
         --output-dir $prefix \\
         $num_gpus \\
